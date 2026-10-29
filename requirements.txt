@@ -1,4 +1,7 @@
 # ProperDocs and the theme used by this documentation site.
 # Install with: pip install -r requirements.txt
 properdocs==1.6.7
+
+# MaterialX requires mkdocs 1.6.1 as a transitive dependency, but the site is
+# always built with properdocs.
 mkdocs-materialx==10.2.2

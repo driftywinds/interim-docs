@@ -46,7 +46,7 @@ The output in `site/` is static and can be served from any web host.
    | Setting | Value |
    | --- | --- |
    | Framework preset | None |
-   | Build command | `pip install -r requirements.txt && properdocs build --strict` |
+   | Build command | `pip install -r requirements.txt && python -m properdocs build --strict` |
    | Build output directory | `site` |
 
 4. Add an environment variable `PYTHON_VERSION=3.12` for both production and

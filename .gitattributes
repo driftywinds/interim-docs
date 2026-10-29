@@ -1,0 +1,5 @@
+# Normalize text files to LF so Cloudflare Pages builds match local checkouts.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
