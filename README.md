@@ -19,7 +19,7 @@ config lives in `properdocs.yml`. It is deployed with
 python -m venv .venv
 . .venv/bin/activate        # Windows: .venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-properdocs serve            # http://127.0.0.1:8000
+python -m properdocs serve  # http://127.0.0.1:8000
 ```
 
 The dev server watches `docs/` and `properdocs.yml` and reloads the browser.
@@ -27,9 +27,9 @@ The dev server watches `docs/` and `properdocs.yml` and reloads the browser.
 ## Build
 
 ```sh
-properdocs build            # writes ./site
-properdocs build --strict   # fail on warnings; used by CI and Cloudflare Pages
-python scripts/check_links.py
+python -m properdocs build            # writes ./site
+python -m properdocs build --strict   # fail on warnings; used by CI and Pages
+python scripts/check_links.py         # internal link and anchor check
 ```
 
 The output in `site/` is static and can be served from any web host.
@@ -59,7 +59,7 @@ The output in `site/` is static and can be served from any web host.
 
 ```sh
 pip install -r requirements.txt
-properdocs build --strict
+python -m properdocs build --strict
 npx wrangler pages deploy site --project-name interim-docs
 ```
 
@@ -81,6 +81,7 @@ and cache lifetimes for Cloudflare Pages.
 properdocs.yml          site config, theme, Markdown extensions, nav
 requirements.txt        pinned ProperDocs and theme versions
 wrangler.toml           Cloudflare Pages project config
+.gitattributes          LF normalization for reproducible builds
 scripts/check_links.py  internal link and anchor checker used by CI
 docs/
   index.md              home page
@@ -96,13 +97,16 @@ docs/
 
 ## Keeping content in sync
 
-The upstream repository keeps plain Markdown in `docs/` plus
-`CONTRIBUTING.md` and `SECURITY.md`. This site reorganizes that material and
-links back to the repository for files such as `compose.sss3.yaml`,
-`Caddyfile.sss3`, and the Cloudflare Worker. When upstream behavior changes,
-update when upstream behavior changes,
-update the matching page here and the version pins in `requirements.txt` only
-when the toolchain changes.
+The upstream repository keeps plain Markdown in `docs/` plus `CONTRIBUTING.md`
+and `SECURITY.md`. This site reorganizes that material and links back to the
+repository for files such as `compose.sss3.yaml`, `Caddyfile.sss3`, and the
+Cloudflare Worker.
+
+When upstream behavior changes:
+
+- update the matching page here, keeping examples and defaults in step;
+- bump `requirements.txt` only when the toolchain changes;
+- rebuild with `--strict` and run `scripts/check_links.py`.
 
 ## License
 

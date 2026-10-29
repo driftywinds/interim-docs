@@ -112,7 +112,7 @@ cannot introduce.
 
 | Change | Start here |
 | --- | --- |
-| New environment variable | `internal/config/config.go`, then `docs/reference/configuration.md`. |
+| New environment variable | `internal/config/config.go`, then the [configuration reference](../reference/configuration.md). |
 | New API endpoint | `internal/server/api.go`, the router in `server.go`, and `web/openapi.yaml`. |
 | New UI page | `web/templates/*.html` plus a handler in `internal/server/pages.go`. |
 | Upload state machine | `internal/server/upload.go`, `internal/store/uploads.go`. |
