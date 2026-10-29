@@ -45,7 +45,7 @@ boundary they touch.
 - Describe the behavior change and how you tested it.
 - Call out any new environment variable, endpoint, or migration.
 - Keep documentation in sync; user-visible behavior belongs in this site and in
-  the repository's `docs/` directory.
+  the interim repository's `docs/` directory.
 
 ## Related pages
 
