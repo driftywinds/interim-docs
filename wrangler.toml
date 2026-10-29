@@ -1,0 +1,15 @@
+# Cloudflare Pages project settings.
+#
+# Connecting the repository in the Cloudflare dashboard is enough; wrangler
+# reads the same values from here when deploying from the command line.
+#
+#   npx wrangler pages deploy site --project-name interim-docs
+#
+# Build command (set in the dashboard or CI):
+#   pip install -r requirements.txt && properdocs build --strict
+# Build output directory:
+#   site
+
+name = "interim-docs"
+pages_build_output_dir = "site"
+compatibility_date = "2025-10-01"

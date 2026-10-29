@@ -1,0 +1,38 @@
+name: docs
+
+# Build-only validation. Deployment is handled by Cloudflare Pages, which builds
+# the site on every push to main.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: docs-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install ProperDocs
+        run: pip install -r requirements.txt
+      - name: Build site
+        run: properdocs build --strict
+      - name: Check internal links
+        run: python scripts/check_links.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: site
+          path: site
+          retention-days: 7

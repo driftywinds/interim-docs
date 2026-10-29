@@ -1,0 +1,194 @@
+---
+description: Endpoint rules, bucket CORS, and provider notes for AWS, MinIO, R2, B2, and Wasabi.
+---
+
+# S3-compatible storage
+
+interim does not hard-code AWS behaviour. The AWS SDK v2 client uses SigV4,
+path-style addressing by default, and forces checksum calculation and validation
+to `when_required` for compatibility with smaller S3 clones.
+
+For an internal sss3 endpoint:
+
+```dotenv
+S3_ENDPOINT=http://sss3:9000
+S3_PUBLIC_ENDPOINT=https://objects.example.com
+S3_REGION=us-east-1
+S3_FORCE_PATH_STYLE=true
+S3_BUCKET=interim
+```
+
+`S3_PUBLIC_ENDPOINT` matters: the server signs with the internal client but the
+browser uploads to the public host. Both endpoints must point at the same bucket
+and credentials. If you do not expose S3 directly, put it behind a reverse
+proxy; do not rewrite the signed host/path.
+
+The bucket should be private. The browser receives a PUT URL scoped to one
+staging object key and a short expiry. interim sets `Content-Disposition:
+attachment` through the signed PUT headers; in S3 download mode it also adds a
+response override to signed GETs. In worker mode the Worker sets the response
+header.
+
+## Upload staging and write-only credentials
+
+Presigned browser PUTs write to `<S3_OBJECT_PREFIX>uploads/<upload-id>`. For a
+single PUT, the server verifies the staging object, copies it with `CopyObject`
+to `<S3_OBJECT_PREFIX>objects/<random>`, and commits the live key. The client
+never receives a URL for the live key. For multipart, `CompleteMultipartUpload`
+turns the staging key into the live object, so there is no second copy and no
+5 GB single-copy limit.
+
+With multipart enabled, browser part URLs use `S3_PUBLIC_ENDPOINT`, while
+`CreateMultipartUpload`, `CompleteMultipartUpload`, `ListParts`, and
+`AbortMultipartUpload` use the server-side `S3_ENDPOINT`. On sss3 that endpoint
+must be internal/direct because the public Caddy listener strips `X-Amz-*`
+headers (including `X-Amz-Copy-Source`), so it cannot complete a single-PUT
+server-side copy. The public endpoint must strip every `X-Amz-*` request header,
+not merely a fixed denylist, so a presigned PUT cannot switch into `CopyObject`,
+`UploadPartCopy`, ACL, tagging, SSE, storage-class, or a future variant.
+
+For providers that support write-only credentials, set
+`S3_PUT_ACCESS_KEY` and `S3_PUT_SECRET_KEY`. Those credentials are used only for
+presigning browser PUTs; `S3_ACCESS_KEY` / `S3_SECRET_KEY` retain read, copy,
+list, and delete access. On AWS, the upload identity needs only `s3:PutObject`
+on the bucket/prefix. On B2, use a key with `writeFiles` only. Multipart requires
+either write-only upload credentials or `S3_PUBLIC_ENDPOINT_BLOCKS_COPY=true`
+for a distinct public proxy that strips every `X-Amz-*` request header. The flag
+is an unverified operator assertion; use write-only credentials where possible.
+sss3 has no write-only credential, so its public proxy must enforce the strip;
+the checked-in Caddy config does this. Do not assume B2, R2, MinIO, or NooBaa
+rejects an unsigned `X-Amz-Copy-Source`; verify the provider's behavior.
+
+`MULTIPART_SIGN_PART_LENGTH=true` signs each part's exact Content-Length.
+Completion also calls `ListParts` and compares provider-reported sizes and ETags
+against the recorded parts before assembly. The main read/write identity
+therefore needs `ListParts` and `ListBucketMultipartUploads` in addition to the
+existing object permissions; the write-only upload identity does not.
+
+## Required bucket CORS
+
+Direct uploads require CORS on the bucket. Allow the interim origin, the `PUT`
+method, and the headers included in the create-upload response:
+
+```json
+[
+  {
+    "AllowedOrigins": ["https://files.example.com"],
+    "AllowedMethods": ["PUT"],
+    "AllowedHeaders": ["content-type", "content-disposition"],
+    "ExposeHeaders": ["ETag"],
+    "MaxAgeSeconds": 3000
+  }
+]
+```
+
+Multipart browser uploads require the bucket CORS policy to expose `ETag`;
+otherwise the browser cannot report the part checksum to interim.
+
+API-only clients such as curl do not need CORS, but do need a browser-reachable
+`S3_PUBLIC_ENDPOINT` and a provider that supports presigned PUT requests. If
+`PUBLIC_BASE_URL` is HTTPS, the public S3 endpoint must also be HTTPS to avoid
+mixed-content blocking. The app also calls `HeadObject` and `ListObjectsV2` for
+verification and the orphan janitor. If the provider does not support
+`ListObjectsV2`, the janitor logs the failure and still cleans known expired
+intents.
+
+## Provider examples
+
+=== "AWS S3"
+
+    ```dotenv
+    S3_ENDPOINT=
+    S3_PUBLIC_ENDPOINT=
+    S3_REGION=eu-west-1
+    S3_BUCKET=interim
+    S3_FORCE_PATH_STYLE=false
+    S3_ACCESS_KEY=
+    S3_SECRET_KEY=
+    ```
+
+    Leave both endpoints empty and both keys empty to use the instance role or
+    the default credential chain. The identity needs `PutObject`, `GetObject`,
+    `DeleteObject`, `ListBucket`, and, with multipart enabled,
+    `ListMultipartUploadParts`, `ListBucketMultipartUploads`, and
+    `AbortMultipartUpload`.
+
+=== "Cloudflare R2"
+
+    ```dotenv
+    S3_ENDPOINT=https://<account-id>.r2.cloudflarestorage.com
+    S3_PUBLIC_ENDPOINT=https://<account-id>.r2.cloudflarestorage.com
+    S3_REGION=auto
+    S3_BUCKET=interim
+    S3_FORCE_PATH_STYLE=true
+    ```
+
+    Presign against the R2 host, not a custom domain: SigV4 signs the host. R2
+    ignores the region value, so `auto` and `us-east-1` both work.
+
+=== "Backblaze B2"
+
+    ```dotenv
+    S3_ENDPOINT=https://s3.us-west-004.backblazeb2.com
+    S3_PUBLIC_ENDPOINT=https://s3.us-west-004.backblazeb2.com
+    S3_REGION=us-west-004
+    S3_BUCKET=interim
+    S3_FORCE_PATH_STYLE=true
+    S3_AUTO_CREATE_BUCKET=false
+    ```
+
+    The region is the B2 cluster ID. Create the bucket in the B2 console first.
+    For private downloads through Cloudflare, see
+    [B2 with a Cloudflare Worker](b2-worker.md).
+
+=== "MinIO"
+
+    ```dotenv
+    S3_ENDPOINT=http://minio:9000
+    S3_PUBLIC_ENDPOINT=https://objects.example.com
+    S3_REGION=us-east-1
+    S3_BUCKET=interim
+    S3_FORCE_PATH_STYLE=true
+    S3_AUTO_CREATE_BUCKET=true
+    ```
+
+    MinIO accepts any consistent region. `S3_PUBLIC_ENDPOINT` is what the browser
+    uses, so it must be the externally reachable host and must preserve the
+    signed path.
+
+=== "Wasabi"
+
+    ```dotenv
+    S3_ENDPOINT=https://s3.eu-central-2.wasabisys.com
+    S3_PUBLIC_ENDPOINT=https://s3.eu-central-2.wasabisys.com
+    S3_REGION=eu-central-2
+    S3_BUCKET=interim
+    S3_FORCE_PATH_STYLE=true
+    ```
+
+=== "sss3"
+
+    ```dotenv
+    S3_ENDPOINT=http://stupid-simple-s3:5553
+    S3_PUBLIC_ENDPOINT=https://sss3.example.com
+    S3_REGION=us-east-1
+    S3_BUCKET=interim
+    S3_FORCE_PATH_STYLE=true
+    S3_PUBLIC_ENDPOINT_BLOCKS_COPY=true
+    ```
+
+    sss3 needs a CORS proxy in front of it for browser uploads. See
+    [sss3 with Cloudflare and Caddy](sss3-cloudflare.md) or
+    [Tailscale-only sss3](tailscale-sss3.md).
+
+## Specialized routes
+
+- [sss3 with Cloudflare and Caddy](sss3-cloudflare.md): CORS proxy, Cloudflare
+  Tunnel, and the ~100 MB request-body cap.
+- [Tailscale-only sss3](tailscale-sss3.md): large uploads through a VPS and
+  tailnet without Cloudflare in the data path.
+- [B2 private bucket with Cloudflare Worker](b2-worker.md): private downloads
+  with B2-to-Cloudflare free egress.
+
+For capacity, reservation, and expiry behaviour, see
+[Capacity and retention](../operations/capacity-and-retention.md).

@@ -1,0 +1,18 @@
+# ProperDocs build output
+site/
+
+# Local preview screenshots
+.preview/
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.cache/
+
+# Editors and OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

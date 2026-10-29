@@ -1,0 +1,121 @@
+# ProperDocs configuration for the interim documentation site.
+#
+#   py -m properdocs serve     # local preview at http://127.0.0.1:8000
+#   py -m properdocs build     # static output in ./site
+#
+# ProperDocs is the maintained continuation of MkDocs, so the configuration and
+# Markdown extensions are the ones MkDocs users already know.
+
+site_name: interim
+site_description: Temporary file hosting on S3-compatible storage.
+site_url: https://interim-docs.pages.dev/
+repo_url: https://github.com/driftywinds/interim
+repo_name: driftywinds/interim
+edit_uri: https://github.com/driftywinds/interim-docs/edit/main/docs/
+copyright: Copyright &copy; 2026 driftywinds · GNU AGPL-3.0
+
+theme:
+  name: materialx
+  language: en
+  logo: assets/favicon.svg
+  favicon: assets/favicon.svg
+  # Keep the site free of third-party font requests. The interim web UI makes
+  # the same choice: system fonts only.
+  font: false
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.indexes
+    - navigation.top
+    - navigation.tracking
+    - navigation.footer
+    - toc.follow
+    - content.code.copy
+    - content.code.select
+    - content.action.edit
+    - search.suggest
+    - search.highlight
+
+extra_css:
+  - assets/extra.css
+
+# The 404 page is built from docs/404.md but is intentionally not in the nav.
+not_in_nav: |
+  /404.md
+
+plugins:
+  # MaterialX ships its own search implementation. The lunr provider keeps the
+  # build self-contained (no subprocess, no external search service).
+  - materialx/search:
+      provider: lunr
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+      toc_depth: 1-3
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/driftywinds/interim
+      name: interim on GitHub
+
+nav:
+  - Home: index.md
+  - Getting started:
+      - Quick start: getting-started/quick-start.md
+      - Choosing a storage route: getting-started/storage-routes.md
+  - Guides:
+      - S3-compatible storage: guides/s3-compatible-storage.md
+      - sss3 with Cloudflare and Caddy: guides/sss3-cloudflare.md
+      - Tailscale-only sss3: guides/tailscale-sss3.md
+      - B2 with a Cloudflare Worker: guides/b2-worker.md
+  - Using interim:
+      - Web UI: usage/web-ui.md
+      - API: usage/api.md
+      - Admin: usage/admin.md
+  - Reference:
+      - Configuration: reference/configuration.md
+  - Operations:
+      - Capacity and retention: operations/capacity-and-retention.md
+      - Deployment: operations/deployment.md
+      - Security model: operations/security.md
+  - Contributing:
+      - Development: contributing/development.md
+      - Architecture: contributing/architecture.md
+      - Contributing guide: contributing/contributing.md
+      - Security policy: contributing/security-policy.md
+      - License: contributing/license.md

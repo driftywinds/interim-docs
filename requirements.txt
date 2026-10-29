@@ -1,0 +1,4 @@
+# ProperDocs and the theme used by this documentation site.
+# Install with: pip install -r requirements.txt
+properdocs==1.6.7
+mkdocs-materialx==10.2.2
